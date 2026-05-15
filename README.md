@@ -1,67 +1,48 @@
-# dependency-risk-mcp
+# codebase-health-intelligence
 
-[![npm version](https://img.shields.io/npm/v/codebase-health-intelligence)](https://www.npmjs.com/package/codebase-health-intelligence)
+[![npm version](https://img.shields.io/npm/v/codebase-health-intelligence?color=crimson)](https://www.npmjs.com/package/codebase-health-intelligence)
 [![npm downloads](https://img.shields.io/npm/dw/codebase-health-intelligence)](https://www.npmjs.com/package/codebase-health-intelligence)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ademyalcin27/codebase-health-intelligence/blob/main/LICENSE)
+[![GitHub repo](https://img.shields.io/badge/GitHub-codebase--health--intelligence-181717?logo=github)](https://github.com/ademyalcin27/codebase-health-intelligence)
 
-> **Your dependencies are silently breaking your codebase.**
+> **Your dependencies are silently breaking your codebase. This MCP server sees what `npm outdated` can't.**
 
-Most teams update packages reactively — after something breaks in production. `dependency-risk-mcp` is an AI Codebase Health & Upgrade Intelligence System that gives you the full picture before you ship: risk scores, breaking change predictions, upgrade strategies, and maintenance signals — all through the MCP protocol.
+`codebase-health-intelligence` is an [MCP](https://modelcontextprotocol.io) server that plugs directly into Claude (Desktop or Code) and gives you AI-ready, signal-driven dependency intelligence: risk scores, breaking change predictions, upgrade strategies, and maintenance signals — all grounded in real npm and GitHub data.
+
+No hallucinations. No guesses. Every signal is fetched live.
 
 ---
 
-## Before vs After
+## Why
 
-| Before | After |
+| Without this | With this |
 |---|---|
-| `npm outdated` shows a list | Risk scores show which ones actually matter |
-| You guess what's breaking | Breaking change predictor tells you exactly |
-| No upgrade order | Step-by-step plan with rollback commands |
-| No context on why | Signal-based explanations per package |
+| `npm outdated` gives you a list | Risk scores show which ones actually matter |
+| You guess what will break | Breaking change predictor tells you exactly |
+| No safe upgrade order | Step-by-step plan with rollback commands |
+| No context on why a package is risky | Signal-based explanations per package |
 
 ---
 
 ## Installation
 
-### Option 1 — npx (no install needed)
+### Global CLI
+
+```bash
+npm install -g codebase-health-intelligence
+```
+
+### npx (no install)
 
 ```bash
 npx codebase-health-intelligence
 ```
 
-### Option 2 — global install
-
-```bash
-npm install -g codebase-health-intelligence
-codebase-health-intelligence
-```
-
-### Option 3 — clone & build (development)
-
-```bash
-git clone https://github.com/your-username/dependency-risk-mcp
-cd dependency-risk-mcp
-npm install && npm run build
-node dist/server.js
-```
-
 ---
 
-## Configuration
+## Wire into Claude
 
-Set a GitHub token to avoid API rate limits (5 000 req/hr vs 60):
-
-```bash
-export GITHUB_TOKEN=ghp_your_token
-```
-
-Or create a `.env` file (auto-loaded):
-```
-GITHUB_TOKEN=ghp_your_token
-```
-
----
-
-## Wire into Claude Code
+### Claude Code
 
 ```bash
 claude mcp add codebase-health-intelligence \
@@ -69,7 +50,7 @@ claude mcp add codebase-health-intelligence \
   -- npx codebase-health-intelligence
 ```
 
-## Wire into Claude Desktop
+### Claude Desktop
 
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
@@ -79,57 +60,51 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
     "codebase-health-intelligence": {
       "command": "npx",
       "args": ["codebase-health-intelligence"],
-      "env": { "GITHUB_TOKEN": "your_token" }
+      "env": {
+        "GITHUB_TOKEN": "ghp_your_token"
+      }
     }
   }
 }
 ```
 
+> **Tip:** Set `GITHUB_TOKEN` to avoid GitHub API rate limits (60 → 5,000 req/hr). [Create a token →](https://github.com/settings/tokens)
+
 ---
 
 ## Tools
 
-### `analyze_dependencies` (v1)
-Fast dependency risk scan. Returns risk score + level per package, sorted by risk descending.
+Five MCP tools are exposed. Ask Claude to use any of them by name.
 
-```json
-{ "projectPath": "/path/to/project" }
+### `analyze_repo_health`
+
+Full dependency analysis with a global health score (0–100), per-package risk breakdown, risk groups, and top critical issues.
+
 ```
-
-### `get_package_risk` (v1)
-Single package risk report.
-
-```json
-{ "packageName": "lodash" }
-```
-
-### `analyze_repo_health_v2` ⭐
-Full analysis with global health score, risk groups, and top critical issues.
-
-```json
-{ "projectPath": "/path/to/project" }
+Prompt: "Analyze the health of my dependencies in /path/to/project"
 ```
 
 **Example output:**
 ```json
 {
-  "healthScore": {
-    "healthScore": 34,
-    "healthLevel": "risky",
-    "summary": "Several dependencies are showing maintenance or adoption problems.",
-    "topIssues": [
-      "3 critical risk packages detected",
-      "47% of packages not published in over a year"
-    ]
-  }
+  "healthScore": 34,
+  "healthLevel": "risky",
+  "summary": "Several dependencies are showing maintenance or adoption problems.",
+  "topIssues": [
+    "3 critical risk packages detected",
+    "47% of packages not published in over a year"
+  ]
 }
 ```
 
-### `generate_upgrade_plan` ⭐
-Step-by-step upgrade strategy ordered by safety. Patch updates first, major bumps last.
+---
 
-```json
-{ "projectPath": "/path/to/project" }
+### `generate_upgrade_plan`
+
+Step-by-step upgrade strategy ordered by safety — patch updates first, major bumps last — with rollback commands for every step.
+
+```
+Prompt: "Generate an upgrade plan for /path/to/project"
 ```
 
 **Example step:**
@@ -147,11 +122,14 @@ Step-by-step upgrade strategy ordered by safety. Patch updates first, major bump
 }
 ```
 
-### `explain_dependency`
-Human-readable, signal-based explanation of a package's risk. No hallucinations — only real data.
+---
 
-```json
-{ "packageName": "left-pad" }
+### `explain_dependency`
+
+Signal-based explanation of why a package is risky or safe. Covers adoption, maintenance, and a concrete recommendation. Based entirely on live-fetched data.
+
+```
+Prompt: "Explain the risk of left-pad"
 ```
 
 **Example output:**
@@ -167,18 +145,24 @@ Human-readable, signal-based explanation of a package's risk. No hallucinations 
 }
 ```
 
-### `build_dependency_graph_v2`
-Enhanced dependency graph with blast radius, critical node detection, and circular dependency analysis.
+---
 
-```json
-{ "projectPath": "/path/to/project" }
+### `build_dependency_graph`
+
+Enhanced dependency graph with blast radius scores, critical node detection, and circular dependency analysis.
+
+```
+Prompt: "Build the dependency graph for /path/to/project"
 ```
 
-### `predict_breaking_changes` ⭐
-Predicts which upgrades are likely to break your code, why, and what areas are affected.
+---
 
-```json
-{ "projectPath": "/path/to/project" }
+### `predict_breaking_changes`
+
+Predicts which upgrades are likely to break your code, why, what areas are affected, and a confidence score.
+
+```
+Prompt: "What will break if I upgrade dependencies in /path/to/project?"
 ```
 
 **Example prediction:**
@@ -191,7 +175,7 @@ Predicts which upgrades are likely to break your code, why, and what areas are a
   "affectedAreas": ["Type System", "Compilation"],
   "likelyBreakingChanges": [
     "Major version bump: high probability of breaking API changes",
-    "Type definitions may be incompatible with your TypeScript version"
+    "Type definitions may be incompatible with your current tsconfig"
   ],
   "reasoning": "This package jumped one major version. Major bumps almost always include breaking changes."
 }
@@ -200,6 +184,8 @@ Predicts which upgrades are likely to break your code, why, and what areas are a
 ---
 
 ## Risk Scoring
+
+Every package is scored 0–100 based on live signals:
 
 | Signal | Penalty |
 |---|---|
@@ -211,14 +197,14 @@ Predicts which upgrades are likely to break your code, why, and what areas are a
 | No repository / repo unavailable | +40 |
 | Open issues > 200 | +10 |
 
-| Score | Level |
+| Score | Risk Level |
 |---|---|
 | 0–24 | `low` |
 | 25–49 | `medium` |
 | 50–74 | `high` |
 | 75–100 | `critical` |
 
-## Repo Health Score
+## Repository Health Score
 
 | Score | Level |
 |---|---|
@@ -233,19 +219,29 @@ Predicts which upgrades are likely to break your code, why, and what areas are a
 
 ```
 src/
-  providers/         # npm registry + GitHub API with caching & dedup
+  providers/                    # npm registry + GitHub API, caching & dedup
   core/
-    analyzer.ts      # reads package.json, fans out in batches of 10
-    risk-score.ts    # additive penalty scoring function
-    graph-engine.ts  # blast radius, critical nodes, circular deps
+    analyzer.ts                 # reads package.json, fans out in batches of 10
+    risk-score.ts               # additive penalty scoring
+    graph-engine.ts             # blast radius, critical nodes, circular deps
     upgrade-planner.ts          # step-by-step upgrade strategy
-    breaking-change-predictor.ts # semver + heuristic impact analysis
+    breaking-change-predictor.ts
   ai/
-    explainer.ts     # rule-based signal explanation (no LLM required)
+    explainer.ts                # rule-based signal explanation (no LLM required)
   scoring/
-    system-health.ts # repo-level health aggregation
-  tools/             # v1 + v2 MCP tool wrappers
-  server.ts          # McpServer with all 7 registered tools
+    system-health.ts            # repo-level health aggregation
+  tools/                        # MCP tool wrappers
+  server.ts                     # entry point — registers all tools
 ```
 
-All npm and GitHub responses are cached in-memory for 10 minutes. Parallel API calls are deduplicated — concurrent requests for the same package share one in-flight fetch.
+All npm and GitHub responses are cached in-memory for 10 minutes. Concurrent requests for the same package share a single in-flight fetch (request deduplication).
+
+---
+
+## Contributing
+
+Issues and PRs welcome at [github.com/ademyalcin27/codebase-health-intelligence](https://github.com/ademyalcin27/codebase-health-intelligence).
+
+## License
+
+[MIT](./LICENSE) © Adem Yalçın

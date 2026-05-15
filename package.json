@@ -22,6 +22,31 @@
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run clean && npm run build && chmod +x dist/server.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ademyalcin27/codebase-health-intelligence.git"
+  },
+  "homepage": "https://github.com/ademyalcin27/codebase-health-intelligence#readme",
+  "bugs": {
+    "url": "https://github.com/ademyalcin27/codebase-health-intelligence/issues"
+  },
+  "author": "Adem Yalçın <ademyalcin27@gmail.com>",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "dependency",
+    "security",
+    "risk",
+    "npm",
+    "supply-chain",
+    "devtools",
+    "claude",
+    "ai"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "dotenv": "^17.4.2",
