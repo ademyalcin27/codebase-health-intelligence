@@ -1,5 +1,8 @@
 # dependency-risk-mcp
 
+[![npm version](https://img.shields.io/npm/v/codebase-health-intelligence)](https://www.npmjs.com/package/codebase-health-intelligence)
+[![npm downloads](https://img.shields.io/npm/dw/codebase-health-intelligence)](https://www.npmjs.com/package/codebase-health-intelligence)
+
 > **Your dependencies are silently breaking your codebase.**
 
 Most teams update packages reactively — after something breaks in production. `dependency-risk-mcp` is an AI Codebase Health & Upgrade Intelligence System that gives you the full picture before you ship: risk scores, breaking change predictions, upgrade strategies, and maintenance signals — all through the MCP protocol.
@@ -17,42 +20,65 @@ Most teams update packages reactively — after something breaks in production. 
 
 ---
 
-## Setup
+## Installation
+
+### Option 1 — npx (no install needed)
 
 ```bash
-npm install
-npm run build
+npx codebase-health-intelligence
 ```
 
-Set a GitHub token to avoid rate limits (5000 req/hr vs 60):
+### Option 2 — global install
+
+```bash
+npm install -g codebase-health-intelligence
+codebase-health-intelligence
+```
+
+### Option 3 — clone & build (development)
+
+```bash
+git clone https://github.com/your-username/dependency-risk-mcp
+cd dependency-risk-mcp
+npm install && npm run build
+node dist/server.js
+```
+
+---
+
+## Configuration
+
+Set a GitHub token to avoid API rate limits (5 000 req/hr vs 60):
 
 ```bash
 export GITHUB_TOKEN=ghp_your_token
 ```
 
-Or add to `.env` (auto-loaded):
+Or create a `.env` file (auto-loaded):
 ```
 GITHUB_TOKEN=ghp_your_token
 ```
 
-### Wire into Claude Code
+---
+
+## Wire into Claude Code
 
 ```bash
-claude mcp add dependency-risk-mcp \
+claude mcp add codebase-health-intelligence \
   -e GITHUB_TOKEN=your_token \
-  -- node /absolute/path/to/dist/server.js
+  -- npx codebase-health-intelligence
 ```
 
-### Wire into Claude Desktop
+## Wire into Claude Desktop
 
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
-    "dependency-risk-mcp": {
-      "command": "node",
-      "args": ["/absolute/path/to/dist/server.js"],
+    "codebase-health-intelligence": {
+      "command": "npx",
+      "args": ["codebase-health-intelligence"],
       "env": { "GITHUB_TOKEN": "your_token" }
     }
   }
