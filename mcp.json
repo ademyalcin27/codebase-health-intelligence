@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "codebase-health-intelligence": {
+      "command": "node",
+      "args": [
+        "/Users/ademyalcin/Documents/ai/mcp-security-project/dist/server.js"
+      ],
+      "env": {
+        "GITHUB_TOKEN": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+      }
+    }
+  }
+}
