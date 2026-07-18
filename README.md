@@ -5,6 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ademyalcin27/codebase-health-intelligence/blob/main/LICENSE)
 [![GitHub repo](https://img.shields.io/badge/GitHub-codebase--health--intelligence-181717?logo=github)](https://github.com/ademyalcin27/codebase-health-intelligence)
 
+> **Updated via Agent**
+
 > **Your dependencies are silently breaking your codebase. This MCP server sees what `npm outdated` can't.**
 
 `codebase-health-intelligence` is an [MCP](https://modelcontextprotocol.io) server that plugs directly into Claude (Desktop or Code) and gives you AI-ready, signal-driven dependency intelligence: risk scores, breaking change predictions, upgrade strategies, and maintenance signals — all grounded in real npm and GitHub data.
