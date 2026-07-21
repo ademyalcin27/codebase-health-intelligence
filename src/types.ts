@@ -193,3 +193,49 @@ export interface EnhancedAnalysisResult extends AnalysisResult {
     low: DependencyRisk[];
   };
 }
+
+// ─── Known Vulnerability Scanning ─────────────────────────────────────────────
+
+export type VulnerabilitySeverity = "critical" | "high" | "medium" | "low" | "unknown";
+export type VulnerabilitySource = "osv" | "ghsa";
+
+export interface Vulnerability {
+  id: string;
+  source: VulnerabilitySource;
+  summary: string;
+  severity: VulnerabilitySeverity;
+  affectedVersions: string | null;
+  fixedVersion: string | null;
+  references: string[];
+}
+
+export interface VulnerabilityFinding extends Vulnerability {
+  packageName: string;
+  packageVersion: string;
+}
+
+export type PackageVulnerabilityStatus = "checked" | "unknown";
+
+export interface PackageVulnerabilityResult {
+  name: string;
+  version: string;
+  vulnerabilities: Vulnerability[];
+  status: PackageVulnerabilityStatus;
+  error?: string;
+}
+
+export interface VulnerabilityReport {
+  projectPath: string;
+  analyzedAt: string;
+  totalPackagesChecked: number;
+  totalVulnerabilities: number;
+  packagesWithUnknownStatus: string[];
+  bySeverity: {
+    critical: VulnerabilityFinding[];
+    high: VulnerabilityFinding[];
+    medium: VulnerabilityFinding[];
+    low: VulnerabilityFinding[];
+    unknown: VulnerabilityFinding[];
+  };
+  packages: PackageVulnerabilityResult[];
+}
