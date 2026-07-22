@@ -12,6 +12,7 @@ import { generateUpgradePlanTool } from "./tools/generateUpgradePlan.js";
 import { explainDependencyTool } from "./tools/explainDependencyTool.js";
 import { buildDependencyGraphV2Tool } from "./tools/buildDependencyGraphV2.js";
 import { predictBreakingChangesTool } from "./tools/predictBreakingChanges.js";
+import { checkKnownVulnerabilities } from "./tools/checkKnownVulnerabilities.js";
 
 validateEnv();
 
@@ -107,6 +108,24 @@ server.registerTool(
   async ({ projectPath }) => {
     logger.info("Tool called: predict_breaking_changes", { projectPath });
     const result = await predictBreakingChangesTool({ projectPath });
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+// ─── Tool: check_known_vulnerabilities ───────────────────────────────────────
+
+server.registerTool(
+  "check_known_vulnerabilities",
+  {
+    description:
+      "Scan a project's npm dependencies against the OSV.dev / GitHub Advisory database for known CVEs and security vulnerabilities. Returns vulnerabilities grouped by severity (critical/high/medium/low), with affected package + version range, CVE/GHSA ID, severity (CVSS score when available), and fixed version when known. Handles network errors gracefully by marking affected packages as 'unknown' rather than failing the analysis.",
+    inputSchema: {
+      projectPath: z.string().min(1).describe("Absolute or relative path to the project directory containing package.json"),
+    },
+  },
+  async ({ projectPath }) => {
+    logger.info("Tool called: check_known_vulnerabilities", { projectPath });
+    const result = await checkKnownVulnerabilities({ projectPath });
     return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   }
 );
