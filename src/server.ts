@@ -12,6 +12,8 @@ import { generateUpgradePlanTool } from "./tools/generateUpgradePlan.js";
 import { explainDependencyTool } from "./tools/explainDependencyTool.js";
 import { buildDependencyGraphV2Tool } from "./tools/buildDependencyGraphV2.js";
 import { predictBreakingChangesTool } from "./tools/predictBreakingChanges.js";
+import { checkKnownVulnerabilitiesTool } from "./tools/checkKnownVulnerabilities.js";
+import { checkKnownVulnerabilitiesTool } from "./tools/checkKnownVulnerabilities.js";
 
 validateEnv();
 
@@ -107,6 +109,21 @@ server.registerTool(
   async ({ projectPath }) => {
     logger.info("Tool called: predict_breaking_changes", { projectPath });
     const result = await predictBreakingChangesTool({ projectPath });
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+// ─── Tool: check_known_vulnerabilities ──────────────────────────────────────
+
+server.registerTool(
+  checkKnownVulnerabilitiesTool.name,
+  {
+    description: checkKnownVulnerabilitiesTool.description,
+    inputSchema: checkKnownVulnerabilitiesTool.inputSchema,
+  },
+  async (input) => {
+    logger.info("Tool called: check_known_vulnerabilities", { input });
+    const result = await checkKnownVulnerabilitiesTool.execute(input);
     return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   }
 );
