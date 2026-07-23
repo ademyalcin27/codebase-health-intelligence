@@ -12,6 +12,10 @@ import { generateUpgradePlanTool } from "./tools/generateUpgradePlan.js";
 import { explainDependencyTool } from "./tools/explainDependencyTool.js";
 import { buildDependencyGraphV2Tool } from "./tools/buildDependencyGraphV2.js";
 import { predictBreakingChangesTool } from "./tools/predictBreakingChanges.js";
+import {
+  checkKnownVulnerabilities,
+  CheckKnownVulnerabilitiesSchema,
+} from "./tools/checkKnownVulnerabilities.js";
 
 validateEnv();
 
@@ -108,6 +112,23 @@ server.registerTool(
     logger.info("Tool called: predict_breaking_changes", { projectPath });
     const result = await predictBreakingChangesTool({ projectPath });
     return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+// ─── Tool: check_known_vulnerabilities ────────────────────────────────────────
+
+server.registerTool(
+  "check_known_vulnerabilities",
+  {
+    description:
+      "Check for known vulnerabilities in project dependencies using the OSV.dev API.",
+    inputSchema: CheckKnownVulnerabilitiesSchema,
+  },
+  async (input) => {
+    logger.info("Tool called: check_known_vulnerabilities", { input });
+    await checkKnownVulnerabilities(input);
+    // The tool itself prints the output, so we can return a simple confirmation.
+    return { content: [{ type: "text", text: "Vulnerability check complete." }] };
   }
 );
 
