@@ -12,6 +12,7 @@ import { generateUpgradePlanTool } from "./tools/generateUpgradePlan.js";
 import { explainDependencyTool } from "./tools/explainDependencyTool.js";
 import { buildDependencyGraphV2Tool } from "./tools/buildDependencyGraphV2.js";
 import { predictBreakingChangesTool } from "./tools/predictBreakingChanges.js";
+import { checkKnownVulnerabilitiesTool } from "./tools/checkKnownVulnerabilities.js";
 
 validateEnv();
 
@@ -107,6 +108,24 @@ server.registerTool(
   async ({ projectPath }) => {
     logger.info("Tool called: predict_breaking_changes", { projectPath });
     const result = await predictBreakingChangesTool({ projectPath });
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+// ─── Tool: check_known_vulnerabilities ──────────────────────────────────────
+
+server.registerTool(
+  "check_known_vulnerabilities",
+  {
+    description:
+      "Checks for known vulnerabilities in a project's dependencies.",
+    inputSchema: {
+      projectPath: z.string().min(1).describe("Absolute or relative path to the project directory containing package.json"),
+    },
+  },
+  async ({ projectPath }) => {
+    logger.info("Tool called: check_known_vulnerabilities", { projectPath });
+    const result = await checkKnownVulnerabilitiesTool({ projectPath });
     return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   }
 );
