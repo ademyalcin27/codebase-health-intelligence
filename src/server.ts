@@ -13,7 +13,6 @@ import { explainDependencyTool } from "./tools/explainDependencyTool.js";
 import { buildDependencyGraphV2Tool } from "./tools/buildDependencyGraphV2.js";
 import { predictBreakingChangesTool } from "./tools/predictBreakingChanges.js";
 import { checkKnownVulnerabilitiesTool } from "./tools/checkKnownVulnerabilities.js";
-import { checkKnownVulnerabilitiesTool } from "./tools/checkKnownVulnerabilities.js";
 
 validateEnv();
 
