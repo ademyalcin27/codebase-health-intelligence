@@ -118,7 +118,7 @@ server.registerTool(
   "check_known_vulnerabilities",
   {
     description:
-      "Checks for known vulnerabilities in a project's dependencies.",
+      "Checks for known vulnerabilities in a project's dependencies using the OSV.dev database. Returns a list of vulnerabilities grouped by severity (critical, high, medium, low, unknown), including details like CVE ID, summary, affected versions, and fixed versions if available.",
     inputSchema: {
       projectPath: z.string().min(1).describe("Absolute or relative path to the project directory containing package.json"),
     },
