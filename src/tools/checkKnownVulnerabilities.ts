@@ -118,45 +118,55 @@ async function checkKnownVulnerabilities(input: z.infer<typeof CheckKnownVulnera
     });
   }
 
-  const groupedBySeverity = {
-    Critical: [] as VulnerabilityReport[],
-    High: [] as VulnerabilityReport[],
-    Medium: [] as VulnerabilityReport[],
-    Low: [] as VulnerabilityReport[],
-    Unknown: [] as VulnerabilityReport[],
-  };
-  
-  for(const report of reports){
-      for(const vuln of report.vulnerabilities){
-          const severityGroup = groupedBySeverity[vuln.severity];
-          if(severityGroup){
-              const existingReport = severityGroup.find(r => r.packageName === report.packageName && r.version === report.version);
-              if(existingReport){
-                existingReport.vulnerabilities.push(vuln);
-              } else {
-                severityGroup.push({
-                    packageName: report.packageName,
-                    version: report.version,
-                    vulnerabilities: [vuln]
-                });
-              }
-          }
+  const reportsBySeverity: { [key in VulnerabilityInfo['severity']]?: { [pkg: string]: VulnerabilityInfo[] } } = {};
+
+  for (const report of reports) {
+    for (const vuln of report.vulnerabilities) {
+      const { severity } = vuln;
+      let severityGroup = reportsBySeverity[severity];
+      if (!severityGroup) {
+        severityGroup = {};
+        reportsBySeverity[severity] = severityGroup;
       }
+      
+      const pkgId = `${report.packageName}@${report.version}`;
+      let packageVulnerabilities = severityGroup[pkgId];
+      if(!packageVulnerabilities){
+        packageVulnerabilities = [];
+        severityGroup[pkgId] = packageVulnerabilities;
+      }
+      packageVulnerabilities.push(vuln);
+    }
   }
 
+  const severities: VulnerabilityInfo['severity'][] = ['Critical', 'High', 'Medium', 'Low', 'Unknown'];
+  let vulnerabilitiesFound = false;
 
-  for (const [severity, reports] of Object.entries(groupedBySeverity)) {
-    if (reports.length > 0) {
-      console.log(`--- ${severity} ---`);
-      for (const report of reports) {
-        console.log(`Package: ${report.packageName}@${report.version}`);
-        for (const vuln of report.vulnerabilities) {
-          console.log(`  ID: ${vuln.id}`);
-          if (vuln.summary) console.log(`  Summary: ${vuln.summary}`);
-          if (vuln.fixedVersions) console.log(`  Fixed in: ${vuln.fixedVersions}`);
-        }
-      }
+  severities.forEach(severity => {
+    const packages = reportsBySeverity[severity];
+    if (packages && Object.keys(packages).length > 0) {
+      vulnerabilitiesFound = true;
+      console.log(`
+--- ${severity.toUpperCase()} ---`);
+      Object.entries(packages).forEach(([pkgId, vulns]) => {
+        console.log(`
+Package: ${pkgId}`);
+        vulns.forEach(vuln => {
+          console.log(`  Vulnerability ID: ${vuln.id}`);
+          console.log(`  Summary: ${vuln.summary || 'Not available'}`);
+          if (vuln.affectedVersions.length > 0) {
+            console.log(`  Affected Versions: ${vuln.affectedVersions.join(', ')}`);
+          }
+          if (vuln.fixedVersions) {
+            console.log(`  Fixed in: ${vuln.fixedVersions}`);
+          }
+        });
+      });
     }
+  });
+
+  if (!vulnerabilitiesFound) {
+    console.log('No known vulnerabilities found across all dependencies.');
   }
 }
 
