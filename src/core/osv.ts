@@ -108,18 +108,15 @@ async function queryOsvApi(queries: OsvBatchQuery[]): Promise<OsvVulnerability[]
 
       const batchResults = parsed.data.results?.map(r => r.vulns || []) || [];
       results.push(...batchResults);
-      
-      // Assuming one result per query in the batch
-      if(results.length > 0){
-        osvCache.set(cacheKey, results[0]);
-        setTimeout(() => osvCache.delete(cacheKey), CACHE_TTL);
-      }
-
-
     } catch (error) {
       console.error('Error querying OSV API:', error);
       results.push(...Array(batch.length).fill([]));
     }
+  }
+
+  if (results.length > 0) {
+    osvCache.set(cacheKey, results.flat());
+    setTimeout(() => osvCache.delete(cacheKey), CACHE_TTL);
   }
 
   return results;
