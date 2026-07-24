@@ -54,7 +54,14 @@ export const checkKnownVulnerabilities = async (
 
     if (result.vulns) {
       for (const vuln of result.vulns) {
-        const severity = vuln.severity?.[0]?.score.toLowerCase() ?? 'unknown';
+        const score = parseFloat(vuln.severity?.[0]?.score);
+        const severity = 
+          score >= 9.0 ? 'critical'
+          : score >= 7.0 ? 'high'
+          : score >= 4.0 ? 'medium'
+          : score > 0 ? 'low'
+          : 'unknown';
+
         const fixedVersion = vuln.affected?.[0]?.ranges?.[0]?.events?.[1]?.fixed;
 
         const report = {
