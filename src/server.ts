@@ -12,6 +12,7 @@ import { generateUpgradePlanTool } from "./tools/generateUpgradePlan.js";
 import { explainDependencyTool } from "./tools/explainDependencyTool.js";
 import { buildDependencyGraphV2Tool } from "./tools/buildDependencyGraphV2.js";
 import { predictBreakingChangesTool } from "./tools/predictBreakingChanges.js";
+import { checkKnownVulnerabilities, checkKnownVulnerabilitiesRequest } from "./tools/checkKnownVulnerabilities.js";
 
 validateEnv();
 
@@ -110,6 +111,23 @@ server.registerTool(
     return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   }
 );
+
+// ─── Tool: check_known_vulnerabilities ──────────────────────────────────────────
+
+server.registerTool(
+  "check_known_vulnerabilities",
+  {
+    description:
+      "Check for known vulnerabilities in project dependencies using the OSV.dev API.",
+    inputSchema: checkKnownVulnerabilitiesRequest,
+  },
+  async (req) => {
+    logger.info("Tool called: check_known_vulnerabilities", { projectPath: req.projectPath });
+    const result = await checkKnownVulnerabilities(req);
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
 
 // ─── Startup & Graceful Shutdown ──────────────────────────────────────────────
 
