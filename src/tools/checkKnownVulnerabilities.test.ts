@@ -1,92 +1,79 @@
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { checkKnownVulnerabilities } from './checkKnownVulnerabilities.js';
-import { queryOsv } from '../core/osv.js';
-import { promises as fs } from 'fs';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { checkKnownVulnerabilities, CheckKnownVulnerabilitiesOutput, Vulnerability } from './checkKnownVulnerabilities.js';
+import * as osv from '../core/osv.js';
+import * as analyzer from '../core/analyzer.js';
+import * as validatePath from '../lib/validate-path.js';
+import { OsvVulnerability } from '../core/osv.js';
+
+vi.mock('../core/osv.js');
+vi.mock('../core/analyzer.js');
+vi.mock('../lib/validate-path.js');
 
 describe('checkKnownVulnerabilities', () => {
   const projectPath = '/fake/project';
-  const packageJson = {
-    dependencies: {
-      'react': '18.2.0',
-    },
-  };
-  const packageLockJson = {
-    packages: {
-      'node_modules/react': {
-        name: 'react',
-        version: '18.2.0',
-      },
-    },
-  };
 
   beforeEach(() => {
-    vi.spyOn(fs, 'readFile').mockImplementation((path) => {
-      if (path.toString().endsWith('package.json')) {
-        return Promise.resolve(JSON.stringify(packageJson));
-      }
-      if (path.toString().endsWith('package-lock.json')) {
-        return Promise.resolve(JSON.stringify(packageLockJson));
-      }
-      return Promise.reject(new Error(`File not found: ${path}`));
-    });
-  });
+    vi.resetAllMocks();
 
-  afterEach(() => {
-    vi.clearAllMocks();
+    vi.mocked(validatePath.validateProjectPath).mockResolvedValue(projectPath);
+
+    vi.mocked(analyzer.readPackageJson).mockResolvedValue({
+      dependencies: {
+        'react': '18.2.0',
+      },
+    });
   });
 
   it('should return vulnerability information for a given project', async () => {
-    const mockOsvResponse = new Map([
-        ['react@18.2.0', {
-          vulns: [
-            {
-              id: 'CVE-2023-1234',
-              severity: [{ type: 'CVSS_V3', score: '9.8' }],
-              affected: [{ ranges: [{ type: 'SEMVER', events: [{}, { fixed: '18.2.1' }] }] }],
-            },
-          ],
-        }],
-      ]);
-    vi.mocked(queryOsv).mockResolvedValue(mockOsvResponse);
-
-    const vulnerabilities = await checkKnownVulnerabilities({ projectPath });
-
-    expect(queryOsv).toHaveBeenCalledWith([{ name: 'react', version: '18.2.0' }]);
-    expect(vulnerabilities.critical).toHaveLength(1);
-    expect(vulnerabilities.critical[0]).toEqual({
-      package: 'react@18.2.0',
+    const mockOsvVulnerability: OsvVulnerability = {
       id: 'CVE-2023-1234',
-      severity: 'critical',
-      fixedVersion: '18.2.1',
-    });
+      summary: 'A critical vulnerability',
+      details: 'Details about the vulnerability',
+      affected: [{
+        package: { name: 'react', ecosystem: 'npm' },
+        versions: ['18.2.0']
+      }],
+      references: [],
+      severity: [{ type: 'CVSS_V3', score: '9.8' }]
+    };
+
+    const mockOsvResponse = new Map<string, OsvVulnerability[]>([[
+      'react',
+      [mockOsvVulnerability]
+    ]]);
+    vi.mocked(osv.queryOsv).mockResolvedValue(mockOsvResponse);
+
+    const result: CheckKnownVulnerabilitiesOutput = await checkKnownVulnerabilities({ projectPath });
+
+    expect(osv.queryOsv).toHaveBeenCalledWith([{ name: 'react', version: '18.2.0' }]);
+    expect(result.summary.total).toBe(1);
+    expect(result.summary.critical).toBe(1);
+    expect(result.vulnerabilities.critical).toHaveLength(1);
+    const vulnerability: Vulnerability = result.vulnerabilities.critical[0];
+    expect(vulnerability.packageName).toBe('react');
+    expect(vulnerability.vulnerability.id).toBe('CVE-2023-1234');
   });
 
   it('should handle packages with no vulnerabilities', async () => {
-    const mockOsvResponse = new Map([
-      ['react@18.2.0', { vulns: [] }],
-    ]);
-    vi.mocked(queryOsv).mockResolvedValue(mockOsvResponse);
+    const mockOsvResponse = new Map<string, OsvVulnerability[]>([[
+      'react',
+      []
+    ]]);
+    vi.mocked(osv.queryOsv).mockResolvedValue(mockOsvResponse);
 
-    const vulnerabilities = await checkKnownVulnerabilities({ projectPath });
+    const result = await checkKnownVulnerabilities({ projectPath });
 
-    expect(vulnerabilities.critical).toHaveLength(0);
-    expect(vulnerabilities.high).toHaveLength(0);
-    expect(vulnerabilities.medium).toHaveLength(0);
-    expect(vulnerabilities.low).toHaveLength(0);
+    expect(result.summary.total).toBe(0);
+    expect(result.summary.critical).toBe(0);
+    expect(result.summary.high).toBe(0);
   });
 
   it('should handle API errors gracefully', async () => {
-    const mockOsvResponse = new Map([
-      ['react@18.2.0', null],
-    ]);
-    vi.mocked(queryOsv).mockResolvedValue(mockOsvResponse);
+    vi.mocked(osv.queryOsv).mockRejectedValue(new Error('API Error'));
 
-    const vulnerabilities = await checkKnownVulnerabilities({ projectPath });
+    const result = await checkKnownVulnerabilities({ projectPath });
 
-    expect(vulnerabilities.unknown).toHaveLength(1);
-    expect(vulnerabilities.unknown[0]).toEqual({
-      package: 'react@18.2.0',
-    });
+    expect(result.summary.total).toBe(0);
   });
 });

@@ -12,7 +12,7 @@ import { generateUpgradePlanTool } from "./tools/generateUpgradePlan.js";
 import { explainDependencyTool } from "./tools/explainDependencyTool.js";
 import { buildDependencyGraphV2Tool } from "./tools/buildDependencyGraphV2.js";
 import { predictBreakingChangesTool } from "./tools/predictBreakingChanges.js";
-import { checkKnownVulnerabilities, checkKnownVulnerabilitiesRequest } from "./tools/checkKnownVulnerabilities.js";
+import { checkKnownVulnerabilities, CheckKnownVulnerabilitiesInput } from "./tools/checkKnownVulnerabilities.js";
 
 validateEnv();
 
@@ -119,7 +119,7 @@ server.registerTool(
   {
     description:
       "Check for known vulnerabilities in project dependencies using the OSV.dev API.",
-    inputSchema: checkKnownVulnerabilitiesRequest,
+    inputSchema: CheckKnownVulnerabilitiesInput,
   },
   async (req) => {
     logger.info("Tool called: check_known_vulnerabilities", { projectPath: req.projectPath });
