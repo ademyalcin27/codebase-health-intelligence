@@ -154,7 +154,8 @@ export interface ExplanationSignal {
 // ─── Vulnerabilities ──────────────────────────────────────────────────────────
 
 export interface Vulnerability {
-  id: string;
+  id?: string;
+  version?: string;
   summary: string;
   details: string;
   affected: any;

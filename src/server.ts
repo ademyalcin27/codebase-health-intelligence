@@ -115,16 +115,16 @@ server.registerTool(
 // ─── Tool: check_known_vulnerabilities ──────────────────────────────────────
 
 server.registerTool(
-  'check_known_vulnerabilities',
+  "check_known_vulnerabilities",
   {
     description:
-      'Scans project dependencies for known CVEs/vulnerabilities using OSV.dev and GitHub Advisory Database.',
+      "Scans project dependencies for known CVEs/vulnerabilities using OSV.dev.",
     inputSchema: checkKnownVulnerabilitiesSchema,
   },
-  async (input: z.infer<typeof checkKnownVulnerabilitiesSchema>) => {
-    logger.info('Tool called: check_known_vulnerabilities', { projectPath: input.projectPath });
+  async (input) => {
+    logger.info("Tool called: check_known_vulnerabilities", { projectPath: input.projectPath });
     const result = await checkKnownVulnerabilities(input);
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   }
 );
 

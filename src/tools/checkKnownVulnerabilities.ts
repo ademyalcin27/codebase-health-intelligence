@@ -1,88 +1,46 @@
-
-import { z } from 'zod';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import { getVulnerabilitiesForPackages } from '../core/osv.js';
-import { logger } from '../lib/logger.js';
-import { Vulnerability } from '../types.js';
+import { z } from "zod";
+import { queryOsv } from "../core/osv.js";
+import { promises as fs } from "fs";
+import path from "path";
 
 export const checkKnownVulnerabilitiesSchema = z.object({
-  projectPath: z.string().describe('The absolute path to the project to analyze.'),
+  projectPath: z.string().describe("The path to the project to analyze."),
 });
 
-type VulnerabilityBySeverity = {
-  critical: Vulnerability[];
-  high: Vulnerability[];
-  medium: Vulnerability[];
-  low: Vulnerability[];
-  unknown: Vulnerability[];
-};
+export async function checkKnownVulnerabilities(input: z.infer<typeof checkKnownVulnerabilitiesSchema>) {
+  const packageJsonPath = path.join(input.projectPath, "package.json");
+  const packageLockJsonPath = path.join(input.projectPath, "package-lock.json");
 
-export async function checkKnownVulnerabilities(
-  input: z.infer<typeof checkKnownVulnerabilitiesSchema>
-): Promise<VulnerabilityBySeverity> {
-  const { projectPath } = input;
+  const [packageJsonContent, packageLockJsonContent] = await Promise.all([
+    fs.readFile(packageJsonPath, "utf-8"),
+    fs.readFile(packageLockJsonPath, "utf-8"),
+  ]);
 
-  const packageLockPath = path.join(projectPath, 'package-lock.json');
+  const packageJson = JSON.parse(packageJsonContent);
+  const packageLockJson = JSON.parse(packageLockJsonContent);
 
-  const packages = new Map<string, string>();
-
-  try {
-    const packageLockContent = await fs.readFile(packageLockPath, 'utf-8');
-    const packageLock = JSON.parse(packageLockContent);
-
-    if (packageLock.packages) {
-      for (const [pkgPath, pkgInfo] of Object.entries(packageLock.packages as Record<string, {version?: string}>)) {
-        if (pkgPath === '' || !pkgInfo.version) {
-          continue;
-        }
-        // pkgPath is like "node_modules/cowsay" or "node_modules/@types/node"
-        const name = pkgPath.replace('node_modules/', '');
-        packages.set(name, pkgInfo.version);
-      }
-    }
-  } catch (error) {
-    logger.error(`Could not read or parse package-lock.json at ${packageLockPath}`, { error: (error as Error).message });
-    throw new Error('Failed to analyze project dependencies. Please ensure package-lock.json exists and is valid.');
-  }
-
-  if (packages.size === 0) {
-    logger.info('No packages found in package-lock.json');
-    return { critical: [], high: [], medium: [], low: [], unknown: [] };
-  }
-  
-  const vulnerabilities = await getVulnerabilitiesForPackages(packages);
-  
-  const results: VulnerabilityBySeverity = {
-    critical: [],
-    high: [],
-    medium: [],
-    low: [],
-    unknown: [],
+  const dependencies = {
+    ...packageJson.dependencies,
+    ...packageJson.devDependencies,
   };
 
-  for (const [packageName, vulns] of vulnerabilities.entries()) {
-    for (const vuln of vulns) {
-      const severity = (vuln.severity || 'UNKNOWN').toLowerCase();
-      switch (severity) {
-        case 'critical':
-          results.critical.push({ ...vuln, packageName });
-          break;
-        case 'high':
-          results.high.push({ ...vuln, packageName });
-          break;
-        case 'medium':
-          results.medium.push({ ...vuln, packageName });
-          break;
-        case 'low':
-          results.low.push({ ...vuln, packageName });
-          break;
-        default:
-          results.unknown.push({ ...vuln, packageName });
-          break;
-      }
-    }
-  }
+  const packagesToScan = Object.keys(dependencies).map((name) => ({
+    name,
+    version: packageLockJson.packages[`node_modules/${name}`]?.version ?? dependencies[name],
+  }));
 
-  return results;
+  const vulnerabilities = await queryOsv(packagesToScan);
+
+  const groupedBySeverity = vulnerabilities.reduce((acc: Record<string, any[]>, vuln) => {
+    const severity = vuln.severity || "unknown";
+    if (!acc[severity]) {
+      acc[severity] = [];
+    }
+    acc[severity].push(vuln);
+    return acc;
+  }, {} as Record<string, any[]>);
+
+  return {
+    vulnerabilities: groupedBySeverity,
+  };
 }

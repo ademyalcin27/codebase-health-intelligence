@@ -1,96 +1,118 @@
+import { z } from "zod";
+import { Vulnerability } from "../types.js";
 
-import { BoundedCache } from '../lib/bounded-cache.js';
-import { fetchWithRetry } from '../lib/fetch-with-retry.js';
-import { logger } from '../lib/logger.js';
-import { Vulnerability } from '../types.js';
+const OSV_API_URL = "https://api.osv.dev/v1/querybatch";
+const BATCH_SIZE = 100;
 
-const OSV_API_URL = 'https://api.osv.dev/v1';
-const BATCH_SIZE = 1000;
+const osvApiResponseSchema = z.object({
+  results: z.array(
+    z.object({
+      vulns: z.array(
+        z.object({
+          id: z.string(),
+          summary: z.string(),
+          details: z.string(),
+          aliases: z.array(z.string()),
+          modified: z.string(),
+          published: z.string(),
+          database_specific: z.object({
+            severity: z.string(),
+          }),
+        })
+      ),
+    })
+  ),
+});
 
-// Process-scoped cache for OSV API responses.
-const cache = new BoundedCache<Vulnerability[]>(1000, 10 * 60 * 1000);
+const cache = new Map<string, { timestamp: number; data: any }>();
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
-/**
- * Queries the OSV.dev API for vulnerabilities for a given set of packages.
- * @param packages A map of package names to their versions.
- * @returns A map of package names to a list of vulnerabilities.
- */
-export async function getVulnerabilitiesForPackages(
-  packages: Map<string, string>
-): Promise<Map<string, Vulnerability[]>> {
-  const results = new Map<string, Vulnerability[]>();
-  const packagesToQuery: { package: { name: string; ecosystem: string }; version: string }[] = [];
+async function queryOsv(
+  packages: { name: string; version: string }[]
+): Promise<Vulnerability[]> {
+  const vulnerabilities: Vulnerability[] = [];
+  for (let i = 0; i < packages.length; i += BATCH_SIZE) {
+    const batch = packages.slice(i, i + BATCH_SIZE);
+    const queries = batch.map((p) => ({
+      package: {
+        name: p.name,
+        ecosystem: "npm",
+      },
+      version: p.version,
+    }));
 
-  for (const [name, version] of packages.entries()) {
-    const cacheKey = `${name}@${version}`;
+    const cacheKey = JSON.stringify(queries);
     const cached = cache.get(cacheKey);
-    if (cached) {
-      results.set(name, cached);
-    } else {
-      packagesToQuery.push({
-        package: { name, ecosystem: 'npm' },
-        version,
-      });
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      vulnerabilities.push(...cached.data);
+      continue;
     }
-  }
 
-  if (packagesToQuery.length === 0) {
-    return results;
-  }
-
-  logger.info(`Querying OSV.dev for ${packagesToQuery.length} packages...`);
-
-  try {
-    for (let i = 0; i < packagesToQuery.length; i += BATCH_SIZE) {
-      const batch = packagesToQuery.slice(i, i + BATCH_SIZE);
-      const response = await fetchWithRetry(`${OSV_API_URL}/querybatch`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ queries: batch }),
+    try {
+      const response = await fetch(OSV_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ queries }),
       });
 
       if (!response.ok) {
-        logger.warn(`OSV.dev API request failed with status ${response.status}`);
-        // Mark all packages in the batch as "unknown"
-        for (const pkg of batch) {
-          results.set(pkg.package.name, []);
-        }
+        console.error(`OSV API request failed with status: ${response.status}`);
+        batch.forEach((p) =>
+          vulnerabilities.push({
+            packageName: p.name,
+            version: p.version,
+            severity: "unknown",
+            summary: "Failed to fetch vulnerability data",
+            details: `OSV API request failed with status: ${response.status}`,
+            affected: [],
+            references: [],
+          })
+        );
         continue;
       }
 
-      const data = await response.json() as { results: { vulns?: any[] }[] };
+      const data = await response.json();
+      const parsedData = osvApiResponseSchema.parse(data);
 
-      for (let j = 0; j < batch.length; j++) {
-        const pkg = batch[j];
-        const res = data.results[j];
-        const cacheKey = `${pkg.package.name}@${pkg.version}`;
-
-        if (res && res.vulns) {
-          const vulns = res.vulns.map((v: any) => ({
-            id: v.id,
-            summary: v.summary,
-            details: v.details,
-            affected: v.affected,
-            references: v.references,
-            severity: v.database_specific?.severity || 'UNKNOWN',
-          }));
-          results.set(pkg.package.name, vulns);
-          cache.set(cacheKey, vulns);
-        } else {
-          results.set(pkg.package.name, []);
-          cache.set(cacheKey, []);
+      const batchVulnerabilities: Vulnerability[] = [];
+      parsedData.results.forEach((result, index) => {
+        const pkg = batch[index];
+        if (result.vulns && result.vulns.length > 0) {
+          result.vulns.forEach((vuln) => {
+            batchVulnerabilities.push({
+              packageName: pkg.name,
+              version: pkg.version,
+              severity: vuln.database_specific.severity.toLowerCase(),
+              summary: vuln.summary,
+              details: vuln.details,
+              id: vuln.id,
+              affected: [],
+              references: [],
+            });
+          });
         }
-      }
-    }
-  } catch (error) {
-    logger.error('Error querying OSV.dev API:', { error: (error as Error).message });
-    // Mark all remaining packages as "unknown"
-    for (const pkg of packagesToQuery) {
-      if (!results.has(pkg.package.name)) {
-        results.set(pkg.package.name, []);
-      }
+      });
+      cache.set(cacheKey, {
+        timestamp: Date.now(),
+        data: batchVulnerabilities,
+      });
+      vulnerabilities.push(...batchVulnerabilities);
+    } catch (error) {
+      console.error("Error querying OSV API:", error);
+      batch.forEach((p) =>
+        vulnerabilities.push({
+          packageName: p.name,
+          version: p.version,
+          severity: "unknown",
+          summary: "Failed to fetch vulnerability data",
+          details: error instanceof Error ? error.message : String(error),
+          affected: [],
+          references: [],
+        })
+      );
     }
   }
-
-  return results;
+  return vulnerabilities;
 }
+
+export { queryOsv };
