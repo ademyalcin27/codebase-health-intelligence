@@ -32,7 +32,7 @@ export async function checkKnownVulnerabilities(input: z.infer<typeof checkKnown
   const vulnerabilities = await queryOsv(packagesToScan);
 
   const groupedBySeverity = vulnerabilities.reduce((acc: Record<string, any[]>, vuln) => {
-    const severity = vuln.severity || "unknown";
+    const severity = vuln.severity?.toLowerCase() || "unknown";
     if (!acc[severity]) {
       acc[severity] = [];
     }

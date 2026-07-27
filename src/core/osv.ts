@@ -7,19 +7,23 @@ const BATCH_SIZE = 100;
 const osvApiResponseSchema = z.object({
   results: z.array(
     z.object({
-      vulns: z.array(
-        z.object({
-          id: z.string(),
-          summary: z.string(),
-          details: z.string(),
-          aliases: z.array(z.string()),
-          modified: z.string(),
-          published: z.string(),
-          database_specific: z.object({
-            severity: z.string(),
-          }),
-        })
-      ),
+      vulns: z
+        .array(
+          z.object({
+            id: z.string(),
+            summary: z.string().optional(),
+            details: z.string().optional(),
+            aliases: z.array(z.string()).optional(),
+            modified: z.string(),
+            published: z.string().optional(),
+            database_specific: z
+              .object({
+                severity: z.string(),
+              })
+              .optional(),
+          })
+        )
+        .optional(),
     })
   ),
 });
@@ -82,9 +86,10 @@ async function queryOsv(
             batchVulnerabilities.push({
               packageName: pkg.name,
               version: pkg.version,
-              severity: vuln.database_specific.severity.toLowerCase(),
-              summary: vuln.summary,
-              details: vuln.details,
+              severity:
+                vuln.database_specific?.severity.toLowerCase() ?? "unknown",
+              summary: vuln.summary ?? "No summary available",
+              details: vuln.details ?? "No details available",
               id: vuln.id,
               affected: [],
               references: [],
