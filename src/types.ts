@@ -151,6 +151,19 @@ export interface ExplanationSignal {
   impact: "positive" | "neutral" | "negative";
 }
 
+// ─── Vulnerabilities ──────────────────────────────────────────────────────────
+
+export interface Vulnerability {
+  id?: string;
+  version?: string;
+  summary: string;
+  details: string;
+  affected: any;
+  references: any;
+  severity: string;
+  packageName?: string;
+}
+
 // ─── System Health ────────────────────────────────────────────────────────────
 
 export interface RepoHealthScore {
