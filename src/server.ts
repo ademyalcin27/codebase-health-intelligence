@@ -12,6 +12,7 @@ import { generateUpgradePlanTool } from "./tools/generateUpgradePlan.js";
 import { explainDependencyTool } from "./tools/explainDependencyTool.js";
 import { buildDependencyGraphV2Tool } from "./tools/buildDependencyGraphV2.js";
 import { predictBreakingChangesTool } from "./tools/predictBreakingChanges.js";
+import { checkKnownVulnerabilities, checkKnownVulnerabilitiesSchema } from './tools/checkKnownVulnerabilities.js';
 
 validateEnv();
 
@@ -108,6 +109,22 @@ server.registerTool(
     logger.info("Tool called: predict_breaking_changes", { projectPath });
     const result = await predictBreakingChangesTool({ projectPath });
     return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+// ─── Tool: check_known_vulnerabilities ──────────────────────────────────────
+
+server.registerTool(
+  'check_known_vulnerabilities',
+  {
+    description:
+      'Scans project dependencies for known CVEs/vulnerabilities using OSV.dev and GitHub Advisory Database.',
+    inputSchema: checkKnownVulnerabilitiesSchema,
+  },
+  async (input: z.infer<typeof checkKnownVulnerabilitiesSchema>) => {
+    logger.info('Tool called: check_known_vulnerabilities', { projectPath: input.projectPath });
+    const result = await checkKnownVulnerabilities(input);
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
   }
 );
 
