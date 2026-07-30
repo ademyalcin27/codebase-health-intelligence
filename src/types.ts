@@ -193,3 +193,22 @@ export interface EnhancedAnalysisResult extends AnalysisResult {
     low: DependencyRisk[];
   };
 }
+
+// ─── Vulnerability Scanning ───────────────────────────────────────────────────
+
+export type VulnerabilitySeverity = "critical" | "high" | "medium" | "low" | "none";
+
+export interface FoundVulnerability {
+  id: string; // CVE or GHSA id
+  severity: VulnerabilitySeverity;
+  description: string;
+  affectedVersions: string;
+  fixedIn: string | null;
+}
+
+export interface PackageVulnerabilityAnalysis {
+  packageName: string;
+  version: string;
+  status: "scanned" | "unknown"; // unknown on network error etc.
+  vulnerabilities: FoundVulnerability[];
+}
