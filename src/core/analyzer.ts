@@ -14,7 +14,7 @@ export interface PackageJson {
   devDependencies?: Record<string, string>;
 }
 
-const BATCH_SIZE = 10;
+export const BATCH_SIZE = 10;
 
 export async function analyzeSinglePackage(name: string, version: string): Promise<DependencyRisk> {
   const npm = await fetchNpmMetadata(name);
